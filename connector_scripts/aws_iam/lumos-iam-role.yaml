@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Lumos AWS IAM cross-account role
+
+Parameters:
+  LumosServiceAccountArn:
+    Type: String
+    Description: "Lumos Service Account ARN from the connector setup page (AWS_SETUP.md Step 1)."
+  ServiceRoleExternalId:
+    Type: String
+    Description: "Service Role External ID from the Lumos connector setup page (AWS_SETUP.md Step 1)."
+
+Resources:
+  LumosAwsIamCrossAccountRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: LumosAwsIamCrossAccountRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: {"Ref": "LumosServiceAccountArn"}
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                sts:ExternalId: {"Ref": "ServiceRoleExternalId"}
+      Policies:
+        - PolicyName: LumosAwsIamAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowAccessToIdentityCenter
+                Effect: Allow
+                Action:
+                  - iam:ListUsers
+                  - iam:GetUser
+                  - iam:ListRoles
+                  - iam:GetRole
+                  - iam:ListGroups
+                  - iam:ListGroupsForUser
+                  - iam:SimulatePrincipalPolicy
+                  - iam:ListPolicies
+                  - iam:ListAttachedUserPolicies
+                  - iam:ListAttachedRolePolicies
+                  - iam:ListAttachedGroupPolicies
+                  - iam:AttachUserPolicy
+                  - iam:DetachUserPolicy
+                  - iam:AddUserToGroup
+                  - iam:RemoveUserFromGroup
+                  - iam:PutUserPolicy
+                  - iam:DeleteUserPolicy
+                  - iam:CreateUser
+                  - iam:CreateLoginProfile
+                  - iam:DeleteUser
+                  - iam:GetUserPolicy
+                  - iam:GetLoginProfile
+                  - iam:DeleteLoginProfile
+                  - iam:ListAccessKeys
+                  - iam:DeleteAccessKey
+                  - iam:ListSigningCertificates
+                  - iam:DeleteSigningCertificate
+                  - iam:ListSSHPublicKeys
+                  - iam:DeleteSSHPublicKey
+                  - iam:ListServiceSpecificCredentials
+                  - iam:DeleteServiceSpecificCredential
+                  - iam:ListMFADevices
+                  - iam:DeactivateMFADevice
+                  - iam:ListVirtualMFADevices
+                  - iam:DeleteVirtualMFADevice
+                  - iam:ListUserPolicies
+                  - sts:GetCallerIdentity
+                  - cloudtrail:LookupEvents
+                Resource: "*"
+              - Sid: AccessToSSOProvisionedRoles
+                Effect: Allow
+                Action:
+                  - iam:AttachRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:ListAttachedRolePolicies
+                  - iam:GetRole
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:PutRolePolicy
+                  - iam:UpdateRole
+                  - iam:ListRolePolicies
+                  - iam:UpdateRoleDescription
+                Resource: "arn:aws:iam::*:role/aws-reserved/sso.amazonaws.com/*"
+              - Sid: AccessToSCIMProvider
+                Effect: Allow
+                Action:
+                  - iam:GetSAMLProvider
+                Resource: "arn:aws:iam::*:saml-provider/AWSSSO_*_DO_NOT_DELETE"
+
+Outputs:
+  RoleArn:
+    Value:
+      Fn::GetAtt: [LumosAwsIamCrossAccountRole, Arn]
