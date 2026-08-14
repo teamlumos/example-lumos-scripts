@@ -1,0 +1,144 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Lumos NHI cross-account read role
+
+Parameters:
+  CustomerIntegratorRoleArn:
+    Type: String
+    Description: "Lumos Customer Integrator Role ARN from the connector setup page (AWS_SETUP.md Step 1)."
+  ServiceRoleExternalId:
+    Type: String
+    Description: "Service Role External ID from the Lumos connector setup page (AWS_SETUP.md Step 1)."
+
+Resources:
+  LumosNhiCrossAccountRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: LumosNhiCrossAccountRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: {"Ref": "CustomerIntegratorRoleArn"}
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                sts:ExternalId: {"Ref": "ServiceRoleExternalId"}
+      Policies:
+        - PolicyName: LumosNhiReadAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: IdentityCenterAndOrg
+                Effect: Allow
+                Action:
+                  - sso:ListInstances
+                  - sso:DescribeInstance
+                  - sso:ListPermissionSets
+                  - sso:DescribePermissionSet
+                  - sso:ListManagedPoliciesInPermissionSet
+                  - sso:GetInlinePolicyForPermissionSet
+                  - sso:ListCustomerManagedPolicyReferencesInPermissionSet
+                  - sso:GetPermissionsBoundaryForPermissionSet
+                  - sso:ListAccountAssignments
+                  - sso:ListAccountAssignmentsForPrincipal
+                  - sso:ListAccountsForProvisionedPermissionSet
+                  - sso:ListApplications
+                  - sso:DescribeApplication
+                  - sso:ListApplicationAssignments
+                  - sso:ListApplicationGrants
+                  - sso:ListApplicationAccessScopes
+                  - sso:ListApplicationAuthenticationMethods
+                  - sso:GetApplicationAuthenticationMethod
+                  - sso:GetApplicationGrant
+                  - sso:ListTrustedTokenIssuers
+                  - sso:DescribeTrustedTokenIssuer
+                  - sso:DescribeInstanceAccessControlAttributeConfiguration
+                  - identitystore:ListUsers
+                  - identitystore:DescribeUser
+                  - identitystore:ListGroups
+                  - identitystore:DescribeGroup
+                  - identitystore:ListGroupMemberships
+                  - organizations:ListAccounts
+                  - organizations:DescribeOrganization
+                  - kms:ListKeys
+                  - sts:GetCallerIdentity
+                Resource: "*"
+              - Sid: IamReadAccess
+                Effect: Allow
+                Action:
+                  - iam:ListRoles
+                  - iam:GetRole
+                  - iam:ListUsers
+                  - iam:GetLoginProfile
+                  - iam:ListMFADevices
+                  - iam:ListInstanceProfiles
+                  - iam:ListAccessKeys
+                  - iam:GetAccessKeyLastUsed
+                  - iam:ListAttachedRolePolicies
+                  - iam:GetPolicy
+                  - iam:GetPolicyVersion
+                  - iam:ListRolePolicies
+                  - iam:GetRolePolicy
+                  - iam:ListAttachedUserPolicies
+                  - iam:ListUserPolicies
+                  - iam:GetUserPolicy
+                  - iam:ListOpenIDConnectProviders
+                  - iam:GetOpenIDConnectProvider
+                  - iam:ListSAMLProviders
+                  - iam:GetSAMLProvider
+                Resource: "*"
+              - Sid: WorkloadResourceRead
+                Effect: Allow
+                Action:
+                  - lambda:ListFunctions
+                  - ecs:ListClusters
+                  - ecs:ListServices
+                  - ecs:DescribeServices
+                  - ecs:DescribeTaskDefinition
+                  - ecs:ListTasks
+                  - ecs:DescribeTasks
+                  - glue:GetJobs
+                  - glue:GetCrawlers
+                  - states:ListStateMachines
+                  - states:DescribeStateMachine
+                  - firehose:ListDeliveryStreams
+                  - firehose:DescribeDeliveryStream
+                  - codepipeline:ListPipelines
+                  - codepipeline:GetPipeline
+                  - sagemaker:ListNotebookInstances
+                  - sagemaker:DescribeNotebookInstance
+                  - sagemaker:ListEndpoints
+                  - sagemaker:DescribeEndpoint
+                  - sagemaker:DescribeEndpointConfig
+                  - events:ListRules
+                  - events:ListTargetsByRule
+                  - pipes:ListPipes
+                  - pipes:DescribePipe
+                  - kafkaconnect:ListConnectors
+                  - codebuild:ListProjects
+                  - codebuild:BatchGetProjects
+                  - batch:DescribeJobDefinitions
+                  - apprunner:ListServices
+                  - apprunner:DescribeService
+                  - bedrock:ListFoundationModels
+                  - bedrock:ListAgents
+                  - bedrock:GetAgent
+                  - iot:ListRoleAliases
+                  - iot:DescribeRoleAlias
+                  - rolesanywhere:ListProfiles
+                  - eks:ListClusters
+                  - eks:ListNodegroups
+                  - eks:DescribeNodegroup
+                  - eks:ListPodIdentityAssociations
+                  - eks:DescribePodIdentityAssociation
+                  - eks:ListFargateProfiles
+                  - eks:DescribeFargateProfile
+                  - secretsmanager:ListSecrets
+                  - ssm:DescribeParameters
+                Resource: "*"
+
+Outputs:
+  RoleArn:
+    Value:
+      Fn::GetAtt: [LumosNhiCrossAccountRole, Arn]
