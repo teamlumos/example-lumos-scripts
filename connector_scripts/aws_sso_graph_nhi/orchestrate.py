@@ -270,13 +270,17 @@ RESOURCE_TOGGLES = [
     "fetch_ssm",
     "fetch_iam_policies",
     "fetch_iam_roles",
+    "fetch_iam_groups",
+    "fetch_last_activity",
+    "fetch_ecs_standalone_cloudtrail",
+    "fetch_batch_last_activity_cloudtrail",
 ]
 
 PER_ACCOUNT_ROLE_NAME = "LumosNhiCrossAccountRole"
 
 
 class NhiConnectorConfig(ConnectorConfig):
-    app_class_id = "aws-sso-graph-internal_ics" # TODO: change to prod
+    app_class_id = "aws-sso-graph_ics"
 
     def __init__(
         self,
@@ -295,7 +299,7 @@ class NhiConnectorConfig(ConnectorConfig):
 
     def auth_payload(self) -> dict[str, Any]:
         return {
-            "aws_sso_graph_internal_runtime_role": { # TODO: change to prod
+            "aws_sso_graph_runtime_role": {
                 "key": {},
                 "impersonation_email": "",
                 "tenant_id": "",
@@ -311,8 +315,11 @@ class NhiConnectorConfig(ConnectorConfig):
             "customer_integrator_role_arn": self._customer_integrator_role_arn,
             "app_instance_identifier": service_role_arn,
         }
-        for toggle in self._disabled_fetch_toggles:
-            settings[toggle] = False
+        # All fetch_* toggles default to False on the connector itself, so every one
+        # not explicitly disabled here must be explicitly turned on — relying on the
+        # connector's own default would create integrations that fetch nothing at all.
+        for toggle in RESOURCE_TOGGLES:
+            settings[toggle] = toggle not in self._disabled_fetch_toggles
         return settings
 
 
@@ -343,7 +350,8 @@ def main() -> None:
         choices=RESOURCE_TOGGLES,
         metavar="FETCH_TOGGLE",
         help="Set a fetch_* settings toggle to False on every created integration (repeatable). "
-        "E.g. --disable-fetch fetch_eks --disable-fetch fetch_bedrock_agent.",
+        "E.g. --disable-fetch fetch_eks --disable-fetch fetch_bedrock_agent, or "
+        "--disable-fetch fetch_ecs_standalone_cloudtrail to skip the extra CloudTrail cost.",
     )
     parser.add_argument("--region", default="us-east-1")
     parser.add_argument(
