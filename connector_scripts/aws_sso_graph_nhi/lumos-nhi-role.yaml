@@ -29,38 +29,9 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Sid: IdentityCenterAndOrg
+              - Sid: ConnectivityValidation
                 Effect: Allow
                 Action:
-                  - sso:ListInstances
-                  - sso:DescribeInstance
-                  - sso:ListPermissionSets
-                  - sso:DescribePermissionSet
-                  - sso:ListManagedPoliciesInPermissionSet
-                  - sso:GetInlinePolicyForPermissionSet
-                  - sso:ListCustomerManagedPolicyReferencesInPermissionSet
-                  - sso:GetPermissionsBoundaryForPermissionSet
-                  - sso:ListAccountAssignments
-                  - sso:ListAccountAssignmentsForPrincipal
-                  - sso:ListAccountsForProvisionedPermissionSet
-                  - sso:ListApplications
-                  - sso:DescribeApplication
-                  - sso:ListApplicationAssignments
-                  - sso:ListApplicationGrants
-                  - sso:ListApplicationAccessScopes
-                  - sso:ListApplicationAuthenticationMethods
-                  - sso:GetApplicationAuthenticationMethod
-                  - sso:GetApplicationGrant
-                  - sso:ListTrustedTokenIssuers
-                  - sso:DescribeTrustedTokenIssuer
-                  - sso:DescribeInstanceAccessControlAttributeConfiguration
-                  - identitystore:ListUsers
-                  - identitystore:DescribeUser
-                  - identitystore:ListGroups
-                  - identitystore:DescribeGroup
-                  - identitystore:ListGroupMemberships
-                  - organizations:ListAccounts
-                  - organizations:DescribeOrganization
                   - kms:ListKeys
                   - sts:GetCallerIdentity
                 Resource: "*"
@@ -83,6 +54,11 @@ Resources:
                   - iam:ListAttachedUserPolicies
                   - iam:ListUserPolicies
                   - iam:GetUserPolicy
+                  - iam:ListGroups
+                  - iam:GetGroup
+                  - iam:ListAttachedGroupPolicies
+                  - iam:ListGroupPolicies
+                  - iam:GetGroupPolicy
                   - iam:ListOpenIDConnectProviders
                   - iam:GetOpenIDConnectProvider
                   - iam:ListSAMLProviders
@@ -123,7 +99,11 @@ Resources:
                   - apprunner:DescribeService
                   - bedrock:ListFoundationModels
                   - bedrock:ListAgents
-                  - bedrock:GetAgent
+                  - bedrock:ListAgentAliases
+                  - bedrock:GetAgentAlias
+                  - bedrock:GetAgentVersion
+                  - bedrock-agentcore:ListAgentRuntimes
+                  - bedrock-agentcore:GetAgentRuntime
                   - iot:ListRoleAliases
                   - iot:DescribeRoleAlias
                   - rolesanywhere:ListProfiles
@@ -136,6 +116,17 @@ Resources:
                   - eks:DescribeFargateProfile
                   - secretsmanager:ListSecrets
                   - ssm:DescribeParameters
+                Resource: "*"
+              - Sid: LastActivityRead
+                Effect: Allow
+                Action:
+                  - cloudwatch:GetMetricData
+                  - ec2:DescribeInstances
+                  - glue:GetJobRuns
+                  - codepipeline:ListPipelineExecutions
+                  - batch:DescribeJobQueues
+                  - batch:ListJobs
+                  - cloudtrail:LookupEvents
                 Resource: "*"
 
 Outputs:

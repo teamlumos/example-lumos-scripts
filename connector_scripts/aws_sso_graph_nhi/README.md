@@ -99,6 +99,42 @@ are skipped, and only new or missing accounts are added.
 | `--live` | No | Actually creates integrations. Without it, the script only shows what it would do. |
 | `-v`, `--verbose` | No | Detailed logging. |
 
+### Available `--disable-fetch` toggles
+
+Every toggle below is **on by default** for every account this script connects. Pass
+`--disable-fetch <toggle>` (repeatable) to turn specific ones off — e.g.
+`--disable-fetch fetch_eks --disable-fetch fetch_bedrock_agent`.
+
+| Toggle | What it collects |
+|---|---|
+| `fetch_iam_users` | IAM users |
+| `fetch_iam_groups` | IAM group membership and inherited group permissions |
+| `fetch_iam_roles` | IAM role entitlements |
+| `fetch_iam_policies` | IAM policy terminal resources (the ARNs a role's policies grant access to) |
+| `fetch_federated_principals` | Federated principals (OIDC/SAML) |
+| `fetch_lambda` | Lambda functions |
+| `fetch_ecs` | ECS tasks & services |
+| `fetch_ec2` | EC2 instance profiles |
+| `fetch_glue` | Glue jobs |
+| `fetch_step_functions` | Step Functions |
+| `fetch_firehose` | Kinesis Firehose streams |
+| `fetch_codepipeline` | CodePipeline pipelines |
+| `fetch_sagemaker` | SageMaker jobs |
+| `fetch_eventbridge` | EventBridge rules & pipes |
+| `fetch_kafkaconnect` | MSK Connect connectors |
+| `fetch_codebuild` | CodeBuild projects |
+| `fetch_batch` | Batch job definitions |
+| `fetch_apprunner` | App Runner services |
+| `fetch_bedrock_agent` | Bedrock agents |
+| `fetch_iot` | IoT role aliases |
+| `fetch_roles_anywhere` | IAM Roles Anywhere profiles |
+| `fetch_eks` | EKS workloads (nodes, pods, Fargate) |
+| `fetch_secrets_manager` | Secrets Manager secrets |
+| `fetch_ssm` | SSM SecureString parameters |
+| `fetch_last_activity` | Last-activity data for all of the above (the master switch — disabling this turns off last-activity everywhere, regardless of the per-resource toggles above) |
+| `fetch_ecs_standalone_cloudtrail` | Extends ECS standalone task visibility past AWS's ~1 hour retention window by using CloudTrail instead — costs extra CloudTrail `LookupEvents` calls per sync |
+| `fetch_batch_last_activity_cloudtrail` | Falls back to CloudTrail for Batch job last-activity once it's aged out of `ListJobs` — costs extra CloudTrail `LookupEvents` calls per sync |
+
 ## What happens when you run it
 
 1. Every account in your Organization is listed.
