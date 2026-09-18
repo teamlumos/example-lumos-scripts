@@ -56,6 +56,7 @@ export LUMOS_API_KEY=<your-lumos-api-key>
 python orchestrate.py \
   --stack-set-name lumos-nhi-cross-account-role \
   --service-role-external-id <external-id> \
+  --customer-integrator-role-arn <customer-integrator-role-arn> \
   --verbose
 ```
 
@@ -67,6 +68,7 @@ export LUMOS_API_KEY=<your-lumos-api-key>
 python orchestrate.py \
   --stack-set-name lumos-nhi-cross-account-role \
   --service-role-external-id <external-id> \
+  --customer-integrator-role-arn <customer-integrator-role-arn> \
   --live \
   --verbose
 ```
@@ -77,6 +79,7 @@ You can also pass the key directly as a flag instead of using the environment va
 python orchestrate.py \
   --stack-set-name lumos-nhi-cross-account-role \
   --service-role-external-id <external-id> \
+  --customer-integrator-role-arn <customer-integrator-role-arn> \
   --live \
   --lumos-api-key <your-lumos-api-key> \
   --verbose
@@ -92,18 +95,20 @@ are skipped, and only new or missing accounts are added.
 | `--stack-set-name` | Yes | The StackSet name you chose in `AWS_SETUP.md` Step 3. |
 | `--service-role-external-id` | Yes | Unique to your organization — from `AWS_SETUP.md` Step 1. |
 | `--lumos-api-key` | Yes | From `AWS_SETUP.md` Step 4. Prefer `LUMOS_API_KEY` env var to keep the key out of shell history. |
-| `--customer-integrator-role-arn` | No | Same for every customer — only override if Lumos tells you to use a different value. |
-| `--per-account-role-name` | No | Defaults to `LumosNhiCrossAccountRole`. Only change this if you renamed the role in the template. |
-| `--region` | No | Defaults to `us-east-1`. Must match the region you deployed the StackSet in. |
-| `--disable-fetch` | No | Repeatable. Turns off collection of a specific resource type (e.g. `--disable-fetch fetch_eks`). |
+| `--customer-integrator-role-arn` | Yes | Copy from the connector's setup form in the Lumos platform (`AWS_SETUP.md` Step 1). |
+| `--regions` | No | Comma-separated AWS region codes (e.g. `us-east-1,eu-west-1`) written into each created integration's `regions` setting. Leave empty to let the connector auto-discover and scan every region enabled on the account. |
+| `--stackset-region` | No | Defaults to `us-east-1`. Must exactly match the region you created the StackSet in (`AWS_SETUP.md` Step 3.9) — StackSet lookups only work from that region. Unrelated to `--regions`. |
+| `--disable-fetch` | No | Comma-separated fetch_* toggles to turn off (e.g. `--disable-fetch fetch_eks,fetch_bedrock_agent`). Every toggle not listed here is on by default, except `fetch_ecs_standalone_cloudtrail` — see `--enable-ecs-standalone-cloudtrail`. |
+| `--enable-ecs-standalone-cloudtrail` | No | Turns on `fetch_ecs_standalone_cloudtrail`, the one fetch toggle that defaults off since it extends the sync window by hours. |
 | `--live` | No | Actually creates integrations. Without it, the script only shows what it would do. |
 | `-v`, `--verbose` | No | Detailed logging. |
 
 ### Available `--disable-fetch` toggles
 
-Every toggle below is **on by default** for every account this script connects. Pass
-`--disable-fetch <toggle>` (repeatable) to turn specific ones off — e.g.
-`--disable-fetch fetch_eks --disable-fetch fetch_bedrock_agent`.
+Every toggle below is **on by default** for every account this script connects, except
+`fetch_ecs_standalone_cloudtrail` (off by default — pass `--enable-ecs-standalone-cloudtrail`
+to turn it on). Pass `--disable-fetch <toggle1>,<toggle2>,...` to turn specific ones off —
+e.g. `--disable-fetch fetch_eks,fetch_bedrock_agent`.
 
 | Toggle | What it collects |
 |---|---|
@@ -132,7 +137,7 @@ Every toggle below is **on by default** for every account this script connects. 
 | `fetch_secrets_manager` | Secrets Manager secrets |
 | `fetch_ssm` | SSM SecureString parameters |
 | `fetch_last_activity` | Last-activity data for all of the above (the master switch — disabling this turns off last-activity everywhere, regardless of the per-resource toggles above) |
-| `fetch_ecs_standalone_cloudtrail` | Extends ECS standalone task visibility past AWS's ~1 hour retention window by using CloudTrail instead — costs extra CloudTrail `LookupEvents` calls per sync |
+| `fetch_ecs_standalone_cloudtrail` | **Off by default** — enable with `--enable-ecs-standalone-cloudtrail`. Extends ECS standalone task visibility past AWS's ~1 hour retention window by using CloudTrail instead — costs extra CloudTrail `LookupEvents` calls per sync |
 | `fetch_batch_last_activity_cloudtrail` | Falls back to CloudTrail for Batch job last-activity once it's aged out of `ListJobs` — costs extra CloudTrail `LookupEvents` calls per sync |
 
 ## What happens when you run it
