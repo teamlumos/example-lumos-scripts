@@ -99,7 +99,7 @@ are skipped, and only new or missing accounts are added.
 | `--regions` | No | Comma-separated AWS region codes (e.g. `us-east-1,eu-west-1`) written into each created integration's `regions` setting. Leave empty to let the connector auto-discover and scan every region enabled on the account. |
 | `--stackset-region` | No | Defaults to `us-east-1`. Must exactly match the region you created the StackSet in (`AWS_SETUP.md` Step 3.9) — StackSet lookups only work from that region. Unrelated to `--regions`. |
 | `--disable-fetch` | No | Comma-separated fetch_* toggles to turn off (e.g. `--disable-fetch fetch_eks,fetch_bedrock_agent`). Every toggle not listed here is on by default, except `fetch_ecs_standalone_cloudtrail` — see `--enable-ecs-standalone-cloudtrail`. |
-| `--enable-ecs-standalone-cloudtrail` | No | Turns on `fetch_ecs_standalone_cloudtrail`, the one fetch toggle that defaults off since it extends the sync window by hours. |
+| `--enable-ecs-standalone-cloudtrail` | No | Turns on `fetch_ecs_standalone_cloudtrail`, the one fetch toggle that defaults off. Significantly slows down syncing — consult Lumos before enabling. |
 | `--live` | No | Actually creates integrations. Without it, the script only shows what it would do. |
 | `-v`, `--verbose` | No | Detailed logging. |
 
@@ -137,7 +137,7 @@ e.g. `--disable-fetch fetch_eks,fetch_bedrock_agent`.
 | `fetch_secrets_manager` | Secrets Manager secrets |
 | `fetch_ssm` | SSM SecureString parameters |
 | `fetch_last_activity` | Last-activity data for all of the above (the master switch — disabling this turns off last-activity everywhere, regardless of the per-resource toggles above) |
-| `fetch_ecs_standalone_cloudtrail` | **Off by default** — enable with `--enable-ecs-standalone-cloudtrail`. Extends ECS standalone task visibility past AWS's ~1 hour retention window by using CloudTrail instead — costs extra CloudTrail `LookupEvents` calls per sync |
+| `fetch_ecs_standalone_cloudtrail` | **Off by default** — enable with `--enable-ecs-standalone-cloudtrail`. Extends ECS standalone task visibility past AWS's ~1 hour retention window by using CloudTrail instead. Significantly slows down syncing — consult Lumos before enabling |
 | `fetch_batch_last_activity_cloudtrail` | Falls back to CloudTrail for Batch job last-activity once it's aged out of `ListJobs` — costs extra CloudTrail `LookupEvents` calls per sync |
 
 ## What happens when you run it

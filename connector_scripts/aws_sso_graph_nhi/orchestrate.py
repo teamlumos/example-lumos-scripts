@@ -278,9 +278,11 @@ RESOURCE_TOGGLES = [
     "fetch_batch_last_activity_cloudtrail",
 ]
 
-# Extends the sync window by hours (CloudTrail LookupEvents replaces ListTasks-based
-# discovery), so unlike every other toggle it is NOT turned on by default — an operator
-# must opt in explicitly via --enable-ecs-standalone-cloudtrail.
+# fetch_ecs_standalone_cloudtrail gets its own opt-in flag instead of living in
+# RESOURCE_TOGGLES' default-on set: it replaces ListTasks-based ECS discovery with
+# CloudTrail RunTask event history, which significantly slows down syncing (extra
+# CloudTrail LookupEvents calls per sync, on top of the longer lookback window).
+# Consult Lumos before enabling it.
 OPT_IN_TOGGLES = {"fetch_ecs_standalone_cloudtrail"}
 
 PER_ACCOUNT_ROLE_NAME = "LumosNhiCrossAccountRole"
@@ -373,8 +375,8 @@ def main() -> None:
         action="store_true",
         help="Turn on fetch_ecs_standalone_cloudtrail, the one fetch_* toggle that defaults "
         "off. It replaces ListTasks-based ECS discovery with CloudTrail RunTask event "
-        "history, extending visibility beyond ~1 hour at the cost of additional CloudTrail "
-        "LookupEvents calls per sync.",
+        "history, extending visibility beyond ~1 hour. Significantly slows down syncing — "
+        "consult Lumos before enabling.",
     )
     parser.add_argument(
         "--regions",
