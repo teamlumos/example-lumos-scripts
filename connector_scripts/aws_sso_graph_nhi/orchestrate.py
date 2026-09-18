@@ -116,9 +116,11 @@ class ConnectorConfig:
 class AwsOrchestrator:
     """Handles AWS account enumeration via Organizations and CloudFormation StackSets."""
 
-    def __init__(self, region: str, stack_set_name: str) -> None:
+    def __init__(self, stackset_region: str, stack_set_name: str) -> None:
         self._stack_set_name = stack_set_name
-        session = boto3.Session(region_name=region)
+        # CloudFormation StackSet operations (list_stack_instances, etc.) must target the
+        # region the StackSet was created in.
+        session = boto3.Session(region_name=stackset_region)
         self._orgs_client = session.client("organizations")
         self._cfm_client = session.client("cloudformation")
 
@@ -276,6 +278,13 @@ RESOURCE_TOGGLES = [
     "fetch_batch_last_activity_cloudtrail",
 ]
 
+# fetch_ecs_standalone_cloudtrail gets its own opt-in flag instead of living in
+# RESOURCE_TOGGLES' default-on set: it replaces ListTasks-based ECS discovery with
+# CloudTrail RunTask event history, which significantly slows down syncing (extra
+# CloudTrail LookupEvents calls per sync, on top of the longer lookback window).
+# Consult Lumos before enabling it.
+OPT_IN_TOGGLES = {"fetch_ecs_standalone_cloudtrail"}
+
 PER_ACCOUNT_ROLE_NAME = "LumosNhiCrossAccountRole"
 
 
@@ -284,18 +293,22 @@ class NhiConnectorConfig(ConnectorConfig):
 
     def __init__(
         self,
-        region: str,
         service_role_external_id: str,
         customer_integrator_role_arn: str,
         disabled_fetch_toggles: list[str],
+        enable_ecs_standalone_cloudtrail: bool = False,
+        regions: list[str] | None = None,
     ) -> None:
-        self._region = region
         self._service_role_external_id = service_role_external_id
         self._customer_integrator_role_arn = customer_integrator_role_arn
         self._disabled_fetch_toggles = disabled_fetch_toggles
+        self._enable_ecs_standalone_cloudtrail = enable_ecs_standalone_cloudtrail
+        # Written into each created integration's `regions` setting. Empty means "let
+        # the connector auto-discover every region enabled on the account".
+        self._regions = regions or []
 
     def instance_identifier(self, account_id: str) -> str:
-        return f"aws-nhi-{account_id}"
+        return f"arn:aws:iam::{account_id}:role/{PER_ACCOUNT_ROLE_NAME}"
 
     def auth_payload(self) -> dict[str, Any]:
         return {
@@ -309,7 +322,7 @@ class NhiConnectorConfig(ConnectorConfig):
 
     def settings_payload(self, account_id: str, service_role_arn: str) -> dict[str, Any]:
         settings: dict[str, Any] = {
-            "region": self._region,
+            "regions": self._regions,
             "service_role_arn": service_role_arn,
             "service_role_external_id": self._service_role_external_id,
             "customer_integrator_role_arn": self._customer_integrator_role_arn,
@@ -318,8 +331,15 @@ class NhiConnectorConfig(ConnectorConfig):
         # All fetch_* toggles default to False on the connector itself, so every one
         # not explicitly disabled here must be explicitly turned on — relying on the
         # connector's own default would create integrations that fetch nothing at all.
+        # fetch_ecs_standalone_cloudtrail is the one exception, it stays off unless the operator opts in.
         for toggle in RESOURCE_TOGGLES:
-            settings[toggle] = toggle not in self._disabled_fetch_toggles
+            settings[toggle] = toggle not in self._disabled_fetch_toggles and (
+                toggle not in OPT_IN_TOGGLES
+            )
+        if self._enable_ecs_standalone_cloudtrail:
+            settings["fetch_ecs_standalone_cloudtrail"] = True
+        for toggle in self._disabled_fetch_toggles:
+            settings[toggle] = False
         return settings
 
 
@@ -344,16 +364,35 @@ def main() -> None:
     )
     parser.add_argument(
         "--disable-fetch",
-        action="append",
-        dest="disabled_fetch_toggles",
-        default=[],
-        choices=RESOURCE_TOGGLES,
-        metavar="FETCH_TOGGLE",
-        help="Set a fetch_* settings toggle to False on every created integration (repeatable). "
-        "E.g. --disable-fetch fetch_eks --disable-fetch fetch_bedrock_agent, or "
-        "--disable-fetch fetch_ecs_standalone_cloudtrail to skip the extra CloudTrail cost.",
+        default="",
+        help="Comma-separated fetch_* settings toggles to set to False on every created "
+        "integration — e.g. --disable-fetch fetch_eks,fetch_bedrock_agent. Every toggle "
+        "not listed here is on by default, except fetch_ecs_standalone_cloudtrail — see "
+        "--enable-ecs-standalone-cloudtrail.",
     )
-    parser.add_argument("--region", default="us-east-1")
+    parser.add_argument(
+        "--enable-ecs-standalone-cloudtrail",
+        action="store_true",
+        help="Turn on fetch_ecs_standalone_cloudtrail, the one fetch_* toggle that defaults "
+        "off. It replaces ListTasks-based ECS discovery with CloudTrail RunTask event "
+        "history, extending visibility beyond ~1 hour. Significantly slows down syncing — "
+        "consult Lumos before enabling.",
+    )
+    parser.add_argument(
+        "--regions",
+        default="",
+        help="Comma-separated AWS region codes (e.g. us-east-1,eu-west-1) written into each "
+        "created integration's `regions` setting — the regions the connector scans on an "
+        "ongoing basis. Leave empty to let the connector auto-discover and scan every region "
+        "enabled on the account.",
+    )
+    parser.add_argument(
+        "--stackset-region",
+        default="us-east-1",
+        help="AWS region the CloudFormation StackSet (AWS_SETUP.md Step 3) was created in. "
+        "StackSet lookups must target that exact region or the script won't find it — this "
+        "is unrelated to --regions, which controls what the connector scans going forward.",
+    )
     parser.add_argument(
         "--lumos-api-key",
         default=os.environ.get("LUMOS_API_KEY"),
@@ -376,16 +415,21 @@ def main() -> None:
         logger.error("--lumos-api-key (or LUMOS_API_KEY env var) is required")
         sys.exit(1)
 
+    regions = [r.strip() for r in args.regions.split(",") if r.strip()]
+    disabled_fetch_toggles = [t.strip() for t in args.disable_fetch.split(",") if t.strip()]
+
+    invalid_toggles = sorted(set(disabled_fetch_toggles) - set(RESOURCE_TOGGLES))
+    if invalid_toggles:
+        parser.error(f"--disable-fetch: invalid toggle(s): {', '.join(invalid_toggles)}")
+
     connector = NhiConnectorConfig(
-        region=args.region,
         service_role_external_id=args.service_role_external_id,
         customer_integrator_role_arn=args.customer_integrator_role_arn,
-        disabled_fetch_toggles=args.disabled_fetch_toggles,
+        disabled_fetch_toggles=disabled_fetch_toggles,
+        enable_ecs_standalone_cloudtrail=args.enable_ecs_standalone_cloudtrail,
+        regions=regions,
     )
-    aws = AwsOrchestrator(
-        region=args.region,
-        stack_set_name=args.stack_set_name,
-    )
+    aws = AwsOrchestrator(stackset_region=args.stackset_region, stack_set_name=args.stack_set_name)
     lumos = LumosClient(api_key=args.lumos_api_key)
 
     try:

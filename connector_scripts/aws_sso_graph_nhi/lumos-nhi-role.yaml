@@ -29,104 +29,295 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              - Sid: ConnectivityValidation
+              # Always required, regardless of which fetch_* toggles are enabled.
+              - Sid: AlwaysRequired
                 Effect: Allow
                 Action:
-                  - kms:ListKeys
                   - sts:GetCallerIdentity
+                  - account:ListRegions
                 Resource: "*"
-              - Sid: IamReadAccess
+              # settings.fetch_iam_users
+              - Sid: FetchIamUsers
                 Effect: Allow
                 Action:
-                  - iam:ListRoles
-                  - iam:GetRole
                   - iam:ListUsers
-                  - iam:GetLoginProfile
-                  - iam:ListMFADevices
-                  - iam:ListInstanceProfiles
-                  - iam:ListAccessKeys
-                  - iam:GetAccessKeyLastUsed
-                  - iam:ListAttachedRolePolicies
-                  - iam:GetPolicy
-                  - iam:GetPolicyVersion
-                  - iam:ListRolePolicies
-                  - iam:GetRolePolicy
-                  - iam:ListAttachedUserPolicies
+                  - iam:GetUser
                   - iam:ListUserPolicies
                   - iam:GetUserPolicy
-                  - iam:ListGroups
-                  - iam:GetGroup
-                  - iam:ListAttachedGroupPolicies
-                  - iam:ListGroupPolicies
-                  - iam:GetGroupPolicy
+                  - iam:ListAttachedUserPolicies
+                  - iam:ListGroupsForUser
+                  - iam:ListAccessKeys
+                  - iam:GetAccessKeyLastUsed
+                  - iam:GetLoginProfile
+                  - iam:ListMFADevices
+                  - iam:GetPolicy
+                  - iam:GetPolicyVersion
+                Resource: "*"
+              # settings.fetch_federated_principals
+              - Sid: FetchFederatedPrincipals
+                Effect: Allow
+                Action:
                   - iam:ListOpenIDConnectProviders
                   - iam:GetOpenIDConnectProvider
                   - iam:ListSAMLProviders
                   - iam:GetSAMLProvider
+                  - iam:ListRoles
                 Resource: "*"
-              - Sid: WorkloadResourceRead
+              # settings.fetch_iam_roles
+              - Sid: FetchIamRoleEntitlements
+                Effect: Allow
+                Action:
+                  - iam:ListRoles
+                  - iam:GetRole
+                  - iam:ListRolePolicies
+                  - iam:GetRolePolicy
+                  - iam:ListAttachedRolePolicies
+                  - iam:GetPolicy
+                  - iam:GetPolicyVersion
+                Resource: "*"
+              # settings.fetch_iam_groups
+              - Sid: FetchIamGroupEntitlements
+                Effect: Allow
+                Action:
+                  - iam:ListGroups
+                  - iam:GetGroup
+                  - iam:ListGroupPolicies
+                  - iam:GetGroupPolicy
+                  - iam:ListAttachedGroupPolicies
+                  - iam:GetPolicy
+                  - iam:GetPolicyVersion
+                Resource: "*"
+              # settings.fetch_iam_policies
+              - Sid: FetchIamPolicyTerminalResources
+                Effect: Allow
+                Action:
+                  - iam:ListPolicies
+                  - iam:GetPolicy
+                  - iam:ListPolicyVersions
+                  - iam:GetPolicyVersion
+                Resource: "*"
+              # settings.fetch_lambda
+              - Sid: FetchLambdaFunctions
                 Effect: Allow
                 Action:
                   - lambda:ListFunctions
-                  - ecs:ListClusters
-                  - ecs:ListServices
-                  - ecs:DescribeServices
-                  - ecs:DescribeTaskDefinition
-                  - ecs:ListTasks
-                  - ecs:DescribeTasks
+                  - lambda:GetFunctionConfiguration
+                  - lambda:ListFunctionUrlConfigs
+                  - lambda:GetPolicy
+                Resource: "*"
+              # settings.fetch_ecs
+              - Sid: FetchEcsTasksAndServices
+                Effect: Allow
+                Action:
+                  - ecs:List*
+                  - ecs:Describe*
+                Resource: "*"
+              # settings.fetch_ec2
+              - Sid: FetchEc2InstanceProfiles
+                Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:DescribeSecurityGroups
+                  - autoscaling:Describe*
+                  - iam:ListInstanceProfiles
+                Resource: "*"
+              # settings.fetch_eks
+              - Sid: FetchEksWorkloads
+                Effect: Allow
+                Action:
+                  - eks:List*
+                  - eks:Describe*
+                  - iam:ListRoles
+                Resource: "*"
+              # settings.fetch_glue
+              - Sid: FetchGlueJobs
+                Effect: Allow
+                Action:
                   - glue:GetJobs
                   - glue:GetCrawlers
-                  - states:ListStateMachines
-                  - states:DescribeStateMachine
-                  - firehose:ListDeliveryStreams
-                  - firehose:DescribeDeliveryStream
-                  - codepipeline:ListPipelines
-                  - codepipeline:GetPipeline
-                  - sagemaker:ListNotebookInstances
-                  - sagemaker:DescribeNotebookInstance
-                  - sagemaker:ListEndpoints
-                  - sagemaker:DescribeEndpoint
-                  - sagemaker:DescribeEndpointConfig
+                  - glue:GetJobRuns
+                Resource: "*"
+              # settings.fetch_step_functions
+              - Sid: FetchStepFunctions
+                Effect: Allow
+                Action:
+                  - states:List*
+                  - states:Describe*
+                Resource: "*"
+              # settings.fetch_firehose
+              - Sid: FetchKinesisFirehoseStreams
+                Effect: Allow
+                Action:
+                  - firehose:List*
+                  - firehose:Describe*
+                Resource: "*"
+              # settings.fetch_codepipeline
+              - Sid: FetchCodePipelinePipelines
+                Effect: Allow
+                Action:
+                  - codepipeline:List*
+                  - codepipeline:Get*
+                Resource: "*"
+              # settings.fetch_sagemaker
+              - Sid: FetchSageMakerJobs
+                Effect: Allow
+                Action:
+                  - sagemaker:List*
+                  - sagemaker:Describe*
+                Resource: "*"
+              # settings.fetch_eventbridge
+              - Sid: FetchEventBridgeRulesAndPipes
+                Effect: Allow
+                Action:
                   - events:ListRules
                   - events:ListTargetsByRule
                   - pipes:ListPipes
                   - pipes:DescribePipe
+                Resource: "*"
+              # settings.fetch_kafkaconnect
+              - Sid: FetchMskConnectConnectors
+                Effect: Allow
+                Action:
                   - kafkaconnect:ListConnectors
-                  - codebuild:ListProjects
-                  - codebuild:BatchGetProjects
-                  - batch:DescribeJobDefinitions
-                  - apprunner:ListServices
-                  - apprunner:DescribeService
-                  - bedrock:ListFoundationModels
-                  - bedrock:ListAgents
-                  - bedrock:ListAgentAliases
-                  - bedrock:GetAgentAlias
-                  - bedrock:GetAgentVersion
+                Resource: "*"
+              # settings.fetch_codebuild
+              - Sid: FetchCodeBuildProjects
+                Effect: Allow
+                Action:
+                  - codebuild:List*
+                  - codebuild:BatchGet*
+                Resource: "*"
+              # settings.fetch_batch
+              - Sid: FetchBatchJobDefinitions
+                Effect: Allow
+                Action:
+                  - batch:Describe*
+                  - batch:List*
+                Resource: "*"
+              # settings.fetch_apprunner
+              - Sid: FetchAppRunnerServices
+                Effect: Allow
+                Action:
+                  - apprunner:List*
+                  - apprunner:Describe*
+                Resource: "*"
+              # settings.fetch_bedrock_agent
+              - Sid: FetchBedrockAgents
+                Effect: Allow
+                Action:
+                  - bedrock:List*
+                  - bedrock:Get*
                   - bedrock-agentcore:ListAgentRuntimes
                   - bedrock-agentcore:GetAgentRuntime
-                  - iot:ListRoleAliases
-                  - iot:DescribeRoleAlias
+                Resource: "*"
+              # settings.fetch_iot
+              - Sid: FetchIotRoleAliases
+                Effect: Allow
+                Action:
+                  - iot:List*
+                  - iot:Describe*
+                Resource: "*"
+              # settings.fetch_roles_anywhere
+              - Sid: FetchIamRolesAnywhereProfiles
+                Effect: Allow
+                Action:
                   - rolesanywhere:ListProfiles
-                  - eks:ListClusters
-                  - eks:ListNodegroups
-                  - eks:DescribeNodegroup
-                  - eks:ListPodIdentityAssociations
-                  - eks:DescribePodIdentityAssociation
-                  - eks:ListFargateProfiles
-                  - eks:DescribeFargateProfile
+                Resource: "*"
+              # settings.fetch_secrets_manager
+              - Sid: FetchSecretsManagerSecrets
+                Effect: Allow
+                Action:
                   - secretsmanager:ListSecrets
+                Resource: "*"
+              # settings.fetch_ssm
+              - Sid: FetchSsmSecureStringParameters
+                Effect: Allow
+                Action:
                   - ssm:DescribeParameters
                 Resource: "*"
-              - Sid: LastActivityRead
+              # settings.fetch_last_activity
+              - Sid: FetchNhaLastActivity
                 Effect: Allow
                 Action:
                   - cloudwatch:GetMetricData
-                  - ec2:DescribeInstances
-                  - glue:GetJobRuns
-                  - codepipeline:ListPipelineExecutions
-                  - batch:DescribeJobQueues
-                  - batch:ListJobs
+                  - cloudwatch:ListMetrics
+                Resource: "*"
+              # settings.fetch_batch_last_activity_cloudtrail / settings.fetch_ecs_standalone_cloudtrail
+              - Sid: FetchLastActivityViaCloudTrail
+                Effect: Allow
+                Action:
                   - cloudtrail:LookupEvents
+                Resource: "*"
+              # Not gated by a settings toggle today — granted ahead of the NHI Agent
+              # feature that will consume them.
+              - Sid: NHIAgentIamAuthorizationGraph
+                Effect: Allow
+                Action:
+                  - iam:GetAccountAuthorizationDetails
+                Resource: "*"
+              - Sid: NHIAgentAccessAnalyzerFindings
+                Effect: Allow
+                Action:
+                  - access-analyzer:ListAnalyzers
+                  - access-analyzer:ListFindings
+                  - access-analyzer:GetFinding
+                Resource: "*"
+              - Sid: NHIAgentGuardDutyFindings
+                Effect: Allow
+                Action:
+                  - guardduty:ListDetectors
+                  - guardduty:ListFindings
+                  - guardduty:GetFindings
+                Resource: "*"
+              - Sid: NHIAgentBucketExposure
+                Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                  - s3:GetBucketLocation
+                  - s3:GetBucketPolicy
+                  - s3:GetBucketPolicyStatus
+                  - s3:GetBucketAcl
+                  - s3:GetBucketPublicAccessBlock
+                  - s3:GetAccountPublicAccessBlock
+                Resource: "*"
+              - Sid: NHIAgentKeyPolicyExposure
+                Effect: Allow
+                Action:
+                  - kms:ListKeys
+                  - kms:DescribeKey
+                  - kms:GetKeyPolicy
+                Resource: "*"
+              - Sid: NHIAgentIdentityCenter
+                Effect: Allow
+                Action:
+                  - sso:List*
+                  - sso:Describe*
+                  - sso:Get*
+                  - identitystore:List*
+                  - identitystore:Describe*
+                  - organizations:ListAccounts
+                  - organizations:DescribeOrganization
+                Resource: "*"
+              # Defense in depth: even though every action above is read-only/metadata,
+              # explicitly deny the data-plane read APIs that could expose secret values.
+              - Sid: DenyDataPlaneReads
+                Effect: Deny
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetObjectAttributes
+                  - s3:ListBucket
+                  - s3:ListBucketVersions
+                  - secretsmanager:GetSecretValue
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                  - kms:Decrypt
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - logs:GetLogEvents
+                  - logs:FilterLogEvents
                 Resource: "*"
 
 Outputs:
